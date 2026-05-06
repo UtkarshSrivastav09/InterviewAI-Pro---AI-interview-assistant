@@ -405,6 +405,7 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   }
 
   const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+  const buildHasKeys = !!(import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GROQ_API_KEY);
   const isUsingPlaceholder = settings.apiKey === 'AIzaSyAbcgpDCJ2YFknf7zyhEXJb8CQ0T68IiPs' || settings.apiKey === '' || !settings.apiKey;
   const hasNoRealKey = isUsingPlaceholder;
 
@@ -420,7 +421,8 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-500">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <p className="text-xs text-amber-200 font-medium">
-            <strong className="text-amber-400">Setup Required:</strong> AI is currently limited. 
+            <strong className="text-amber-400">Setup Required:</strong> 
+            {!buildHasKeys ? ' Vercel Keys Not Found. ' : ' AI limited. '}
             <button 
               onClick={() => setShowSettings(true)}
               className="mx-1.5 underline underline-offset-2 hover:text-white transition-colors"
@@ -432,7 +434,7 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               onClick={handleReset}
               className="mx-1.5 underline underline-offset-2 hover:text-white transition-colors"
             >
-              Sync from Vercel
+              Reset & Sync
             </button>
           </p>
         </div>
