@@ -550,9 +550,9 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Panel - Controls & Live Feed - Hidden on very small screens or scrollable */}
-        <div className="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-surface-700/30 flex flex-col bg-surface-950/50 backdrop-blur-md z-10">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+        {/* Left Panel - Controls & Live Feed - Scrollable on mobile, fixed on desktop */}
+        <div className="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-surface-700/30 flex flex-col bg-surface-950/50 backdrop-blur-md z-10 overflow-y-auto lg:overflow-visible shrink-0 max-h-[40vh] lg:max-h-none">
           {/* Main Control Buttons */}
           <div className="p-6 border-b border-surface-700/30">
             <div className="space-y-4">
@@ -600,9 +600,17 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               </div>
 
               {!isSupported && (
-                <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
-                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                  <span>Speech recognition not supported. Use Chrome or Edge.</span>
+                <div className="flex flex-col gap-2 text-xs text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-bold">Speech Not Supported</span>
+                  </div>
+                  <p className="opacity-80">
+                    Your browser doesn't support live voice detection. 
+                    <br />• <strong>iOS:</strong> Use Safari.
+                    <br />• <strong>Android:</strong> Use Chrome.
+                    <br />• <strong>Desktop:</strong> Use Chrome or Edge.
+                  </p>
                 </div>
               )}
 
