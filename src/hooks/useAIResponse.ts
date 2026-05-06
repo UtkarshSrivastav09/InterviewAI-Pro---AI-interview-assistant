@@ -18,7 +18,46 @@ async function callGroq(
     (ctx?.experience ? 'Experience level: ' + ctx.experience + '. ' : '') +
     'Format: 1) Start with a direct 1-sentence definition. 2) Use **bold** for technical terms. 3) Use bullet points for key features/benefits. 4) Provide a 2-3 sentence "Personal Experience" or "Use Case" example. 5) Keep it under 250 words for readability.';
 
-  // Use a CORS proxy because Groq doesn't allow direct browser requests
+  // Use our internal Vercel proxy to avoid CORS issues in production
+  const isProduction = window.location.hostname !== 'localhost';
+  const proxyEndpoint = '/api/proxy';
+  
+  if (isProduction) {
+    const res = await fetch(proxyEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetUrl: 'https://api.groq.com/openai/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + apiKey,
+        },
+        body: {
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: sys },
+            { role: 'user', content: question },
+          ],
+          temperature: 0.6,
+          max_tokens: 800,
+          stream: false,
+        },
+      }),
+      signal,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || data.details || 'Groq proxy error ' + res.status);
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Groq returned empty response');
+    return text;
+  }
+
+  // Fallback for local development (or if you want to use a public proxy)
   const proxyUrl = 'https://corsproxy.io/?';
   const targetUrl = 'https://api.groq.com/openai/v1/chat/completions';
   
