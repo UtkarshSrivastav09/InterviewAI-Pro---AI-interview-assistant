@@ -67,19 +67,40 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
     try {
       const key = local.apiKey.trim();
       if (local.aiModel === 'groq' || key.startsWith('gsk_')) {
-        const proxyUrl = 'https://corsproxy.io/?';
-        const targetUrl = 'https://api.groq.com/openai/v1/chat/completions';
-        const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: 'Say "OK" in one word.' }],
-            max_tokens: 5,
-          }),
-        });
-        if (!res.ok) throw new Error('Status ' + res.status);
-        setTestResult('success');
+        const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+        
+        if (isProduction) {
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUrl: 'https://api.groq.com/openai/v1/chat/completions',
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + key },
+              body: {
+                model: 'llama-3.3-70b-versatile',
+                messages: [{ role: 'user', content: 'Say "OK" in one word.' }],
+                max_tokens: 5,
+              },
+            }),
+          });
+          if (!res.ok) throw new Error('Status ' + res.status);
+          setTestResult('success');
+        } else {
+          const proxyUrl = 'https://corsproxy.io/?';
+          const targetUrl = 'https://api.groq.com/openai/v1/chat/completions';
+          const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              messages: [{ role: 'user', content: 'Say "OK" in one word.' }],
+              max_tokens: 5,
+            }),
+          });
+          if (!res.ok) throw new Error('Status ' + res.status);
+          setTestResult('success');
+        }
       } else if (local.aiModel === 'gemini' || key.startsWith('AIza')) {
         const res = await fetch(
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key,
