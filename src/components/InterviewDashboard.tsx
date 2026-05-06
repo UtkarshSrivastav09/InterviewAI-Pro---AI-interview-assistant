@@ -404,9 +404,14 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     return null;
   }
 
-  const isProduction = window.location.hostname !== 'localhost';
-  const isUsingPlaceholder = settings.apiKey === 'AIzaSyAbcgpDCJ2YFknf7zyhEXJb8CQ0T68IiPs' || settings.apiKey === '';
-  const hasNoRealKey = !settings.apiKey || isUsingPlaceholder;
+  const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+  const isUsingPlaceholder = settings.apiKey === 'AIzaSyAbcgpDCJ2YFknf7zyhEXJb8CQ0T68IiPs' || settings.apiKey === '' || !settings.apiKey;
+  const hasNoRealKey = isUsingPlaceholder;
+
+  const handleReset = () => {
+    localStorage.removeItem('interviewai-settings');
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
@@ -420,9 +425,15 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               onClick={() => setShowSettings(true)}
               className="mx-1.5 underline underline-offset-2 hover:text-white transition-colors"
             >
-              Add your API Key
+              Add Key
             </button> 
-            or configure Vercel Env Variables.
+            or 
+            <button 
+              onClick={handleReset}
+              className="mx-1.5 underline underline-offset-2 hover:text-white transition-colors"
+            >
+              Sync from Vercel
+            </button>
           </p>
         </div>
       )}
