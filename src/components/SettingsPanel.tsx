@@ -154,7 +154,7 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
               <label className="flex items-center gap-2 text-sm font-bold text-white mb-1">
                 <Key className="w-4 h-4 text-indigo-400" />
                 API Key
-                {(local.apiKey === (import.meta as any).env.VITE_GROQ_API_KEY || local.apiKey === (import.meta as any).env.VITE_GEMINI_API_KEY) && (
+                {(local.apiKey === import.meta.env.VITE_GROQ_API_KEY || local.apiKey === import.meta.env.VITE_GEMINI_API_KEY) && (
                   <span className="ml-auto px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-full border border-emerald-500/20 uppercase tracking-wider">
                     System Provided
                   </span>
@@ -220,6 +220,19 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
                 {!testResult && hasKey && (
                   <span className="text-xs text-slate-500">Click test to verify</span>
                 )}
+              </div>
+
+              {/* Vercel Tip */}
+              <div className="mt-4 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                <div className="flex items-center gap-2 text-indigo-300 mb-1">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Deployment Tip</span>
+                </div>
+                <p className="text-[11px] text-indigo-200/70 leading-relaxed">
+                  To keep your key active permanently on Vercel, add it as an Environment Variable: 
+                  <code className="mx-1 text-indigo-300">VITE_GEMINI_API_KEY</code> 
+                  in your Vercel Project Settings.
+                </p>
               </div>
             </div>
           )}

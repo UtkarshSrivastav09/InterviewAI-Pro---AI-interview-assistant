@@ -20,7 +20,6 @@ import {
   Play,
   X,
   CheckCircle,
-  Key,
   ExternalLink,
 } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -36,8 +35,12 @@ interface InterviewDashboardProps {
 }
 
 const defaultSettings: UserSettings = {
-  apiKey: (import.meta as any).env.VITE_GROQ_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || '',
-  aiModel: (import.meta as any).env.VITE_GROQ_API_KEY ? 'groq' : 'gemini',
+  // Default to Gemini for the live site as it is more reliable (no CORS proxy needed)
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY || 
+          import.meta.env.VITE_GROQ_API_KEY || 
+          '', // System Gemini Key (Add via .env)
+  aiModel: import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : 
+           (import.meta.env.VITE_GROQ_API_KEY) ? 'groq' : 'gemini',
   language: 'en-US',
   responseSpeed: 'balanced',
   stealthMode: false,
@@ -401,8 +404,29 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     return null;
   }
 
+  const isProduction = window.location.hostname !== 'localhost';
+  const isUsingPlaceholder = settings.apiKey === 'AIzaSyAbcgpDCJ2YFknf7zyhEXJb8CQ0T68IiPs' || settings.apiKey === '';
+  const hasNoRealKey = !settings.apiKey || isUsingPlaceholder;
+
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
+      {/* Production Setup Warning */}
+      {isProduction && hasNoRealKey && (
+        <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-500">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-200 font-medium">
+            <strong className="text-amber-400">Setup Required:</strong> AI is currently limited. 
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="mx-1.5 underline underline-offset-2 hover:text-white transition-colors"
+            >
+              Add your API Key
+            </button> 
+            or configure Vercel Env Variables.
+          </p>
+        </div>
+      )}
+
       {/* Notification */}
       <AnimatePresence>
         {notification && (
@@ -579,15 +603,6 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               )}
 
               {/* Gemini API prompt */}
-              {!settings.apiKey && (
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="w-full py-2.5 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/30 text-primary-300 rounded-xl text-sm flex items-center justify-center gap-2 transition-all"
-                >
-                  <Key className="w-4 h-4" />
-                  Add Gemini API Key for Best Answers
-                </button>
-              )}
             </div>
 
             {/* Waveform */}

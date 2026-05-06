@@ -29,7 +29,7 @@ async function callGroq(
       Authorization: 'Bearer ' + apiKey,
     },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: sys },
         { role: 'user', content: question },
@@ -263,9 +263,7 @@ function findBestMatch(question: string): { answer: string; category: string; co
     best = {
       answer:
         '**Heard:** "' + question + '"\n\n' +
-        'I don\'t have a specific built-in answer for this.\n\n' +
-        '> Add a **FREE Groq API key** in Settings for full AI answers.\n' +
-        '> Get one at: https://console.groq.com/keys',
+        'I am analyzing your question, but I don\'t have a specific built-in answer for this unique topic yet. Try rephrasing or asking something related to software development.',
       category: 'General',
       confidence: 40,
     };
@@ -309,6 +307,9 @@ export function useAIResponse() {
 
       try {
         /* ── try AI if we have a key ── */
+        const isPlaceholderKey = key === 'AIzaSyAbcgpDCJ2YFknf7zyhEXJb8CQ0T68IiPs';
+        const isProduction = window.location.hostname !== 'localhost';
+
         if (key.length > 10) {
           let answer = '';
           let provider = 'AI';
@@ -317,16 +318,27 @@ export function useAIResponse() {
           const isGemini = model === 'gemini' || key.startsWith('AIza');
           const isGroq = model === 'groq' || key.startsWith('gsk_');
 
-          if (isGemini) {
-            provider = 'Gemini';
-            answer = await callGemini(question, key, ctrl.signal, ctx);
-          } else if (isGroq) {
-            provider = 'Groq';
-            answer = await callGroq(question, key, ctrl.signal, ctx);
-          } else {
-            // Default: try Groq first (fastest), then Gemini
-            provider = 'Groq';
-            answer = await callGroq(question, key, ctrl.signal, ctx);
+          try {
+            if (isGemini) {
+              provider = 'Gemini';
+              answer = await callGemini(question, key, ctrl.signal, ctx);
+            } else if (isGroq) {
+              provider = 'Groq';
+              answer = await callGroq(question, key, ctrl.signal, ctx);
+            } else {
+              // Default: try Groq first (fastest), then Gemini
+              provider = 'Groq';
+              answer = await callGroq(question, key, ctrl.signal, ctx);
+            }
+          } catch (apiErr: any) {
+            // If the key is the placeholder and it fails, provide a specific helpful message
+            if (isPlaceholderKey || !key) {
+              const envMsg = isProduction 
+                ? 'Check your Vercel Environment Variables (VITE_GEMINI_API_KEY).' 
+                : 'Add a valid API key in Settings.';
+              throw new Error(`The system API key failed or is missing. ${envMsg} Error: ${apiErr.message}`);
+            }
+            throw apiErr;
           }
 
           return {
@@ -344,7 +356,13 @@ export function useAIResponse() {
         const delay = settings?.responseSpeed === 'fast' ? 50 : settings?.responseSpeed === 'detailed' ? 300 : 150;
         await new Promise((r) => setTimeout(r, delay));
         const fb = findBestMatch(question);
-        return { id, question, timestamp: new Date(), answer: fb.answer, category: fb.category, confidence: fb.confidence, isProcessing: false };
+        
+        let answer = fb.answer;
+        if (isProduction && !key) {
+          answer = '⚠️ **Setup Required:** No API key detected. Please add `VITE_GEMINI_API_KEY` or `VITE_GROQ_API_KEY` to your Vercel project settings for live AI responses.\n\n' + answer;
+        }
+
+        return { id, question, timestamp: new Date(), answer, category: fb.category, confidence: fb.confidence, isProcessing: false };
       } catch (err: any) {
         if (err.name === 'AbortError') {
           return { id, question, timestamp: new Date(), answer: '_Cancelled._', category: 'Cancelled', confidence: 0, isProcessing: false };
@@ -356,8 +374,8 @@ export function useAIResponse() {
           id,
           question,
           timestamp: new Date(),
-          answer: '⚠️ **API Error:** ' + err.message + '\n\n---\n\n' + fb.answer,
-          category: 'Fallback',
+          answer: '⚠️ **' + (model.includes('gemini') ? 'Gemini' : 'Groq') + ' API Error:** ' + err.message + '\n\n' + fb.answer,
+          category: 'API Error',
           confidence: fb.confidence,
           isProcessing: false,
         };
