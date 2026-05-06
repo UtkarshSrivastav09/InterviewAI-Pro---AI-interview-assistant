@@ -131,10 +131,39 @@ body {
 
 /* Overlay that becomes transparent/hidden during screen share */
 .stealth-mode {
-  opacity: 0.95;
+  opacity: 0.1; /* Extremely low opacity to stay hidden but visible to you */
   transition: opacity 0.3s ease;
+}
+
+.stealth-mode:hover {
+  opacity: 0.9;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 1024px) {
+  .glass {
+    backdrop-filter: blur(10px);
+  }
+  
+  /* Stacked panels on mobile */
+  .flex-col.lg\:flex-row {
+    overflow-y: auto;
+  }
 }
 
 .waveform-bar {
   animation: waveform 0.6s ease-in-out infinite;
+}
+
+/* Ensure nothing shows up on screen captures if possible */
+@media screen {
+  .screen-share-hidden {
+    display: block;
+  }
+}
+
+@media print {
+  .screen-share-hidden {
+    display: none !important;
+  }
 }

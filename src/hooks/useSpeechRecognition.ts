@@ -86,14 +86,14 @@ export function useSpeechRecognition(
           clearTimeout(silenceTimerRef.current);
         }
         
-        // After 2 seconds of silence, trigger the callback
+        // After 0.8 seconds of silence, trigger the callback
         silenceTimerRef.current = setTimeout(() => {
           if (accumulatedRef.current.trim() && onResultRef.current) {
             onResultRef.current(accumulatedRef.current.trim());
             accumulatedRef.current = '';
             setTranscript('');
           }
-        }, 2000);
+        }, 800);
       }
 
       setInterimTranscript(interim);
@@ -108,11 +108,15 @@ export function useSpeechRecognition(
     recognition.onend = () => {
       // Auto-restart if still supposed to be listening
       if (recognitionRef.current === recognition) {
-        try {
-          recognition.start();
-        } catch {
-          setIsListening(false);
-        }
+        setTimeout(() => {
+          try {
+            if (recognitionRef.current === recognition) {
+              recognition.start();
+            }
+          } catch {
+            setIsListening(false);
+          }
+        }, 300);
       }
     };
 

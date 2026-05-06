@@ -67,7 +67,9 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
     try {
       const key = local.apiKey.trim();
       if (local.aiModel === 'groq' || key.startsWith('gsk_')) {
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const proxyUrl = 'https://corsproxy.io/?';
+        const targetUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
           body: JSON.stringify({

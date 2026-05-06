@@ -14,6 +14,7 @@ import {
   EyeOff,
   MessageSquare,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -88,6 +89,19 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       icon: <EyeOff className="w-8 h-8" />,
     },
   ];
+
+  const openPopout = () => {
+    const width = window.screen.width;
+    const height = 150;
+    const left = 0;
+    const top = 0;
+    // We add a 'launch=true' param to tell the app to go straight to dashboard in stealth
+    window.open(
+      window.location.href + '?mode=stealth&launch=true',
+      'InterviewAI-Stealth',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+    );
+  };
 
   return (
     <div className="min-h-screen bg-surface-950 overflow-hidden">
@@ -164,6 +178,15 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             Start Interview Assistant
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
+          
+          <button
+            onClick={openPopout}
+            className="group px-8 py-4 bg-surface-800/50 hover:bg-surface-700/50 border border-surface-700/50 text-white rounded-2xl text-lg font-bold transition-all flex items-center gap-3"
+          >
+            Launch Stealth Bar
+            <ExternalLink className="w-5 h-5 text-primary-400" />
+          </button>
+
           <div className="flex items-center gap-2 text-surface-400 text-sm">
             <Shield className="w-4 h-4 text-green-400" />
             100% Private • No Data Stored
@@ -348,7 +371,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <span className="text-white font-semibold">InterviewAI Pro</span>
           </div>
           <p className="text-surface-500 text-sm">
-            © 2025 InterviewAI Pro. Built with ❤️ for developers.
+            © {new Date().getFullYear()} InterviewAI Pro • Developed by <span className="text-primary-400 font-semibold italic">Utkarsh Srivastav</span>
           </p>
           <div className="flex items-center gap-4 text-surface-500 text-sm">
             <Eye className="w-4 h-4" />

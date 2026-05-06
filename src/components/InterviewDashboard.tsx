@@ -6,22 +6,22 @@ import {
   MonitorOff,
   Monitor,
   Minimize2,
-  Maximize2,
   ArrowLeft,
   Clock,
   Trash2,
   Download,
   Volume2,
   AlertTriangle,
-  Sparkles,
+  Zap,
   BookOpen,
   Send,
-  Zap,
+  Mic,
   Square,
   Play,
   X,
   CheckCircle,
   Key,
+  ExternalLink,
 } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useScreenShareDetection } from '../hooks/useScreenShareDetection';
@@ -53,7 +53,10 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [stealthMode, setStealthMode] = useState(false);
+  const [stealthMode, setStealthMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'stealth';
+  });
   const [session, setSession] = useState<InterviewSession>({
     id: Date.now().toString(),
     title: 'Interview Session',
@@ -65,7 +68,7 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   });
   const [manualQuestion, setManualQuestion] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<'live' | 'practice'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'history' | 'practice'>('live');
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const questionsEndRef = useRef<HTMLDivElement>(null);
@@ -131,7 +134,8 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         ),
       }));
 
-      showNotification('success', 'Answer ready ✓');
+        showNotification('success', 'Answer ready ✓');
+        setActiveTab('live');
     } catch {
       setSession(prev => ({
         ...prev,
@@ -240,6 +244,38 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     showNotification('success', 'Session exported!');
   };
 
+  const openPopout = () => {
+    const width = window.screen.width;
+    const height = 150;
+    const left = 0;
+    const top = 0;
+    window.open(
+      window.location.href + '?mode=stealth',
+      'InterviewAI-Stealth',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+    );
+  };
+
+  // Smart window resizing for stealth pop-out
+  useEffect(() => {
+    if (stealthMode) {
+      const lastQuestion = session.questions[session.questions.length - 1];
+      const hasActiveResult = lastQuestion && !lastQuestion.isProcessing;
+      
+      try {
+        if (hasActiveResult) {
+          // Expand to show answer
+          window.resizeTo(window.outerWidth, 800);
+        } else {
+          // Shrink to thin bar
+          window.resizeTo(window.outerWidth, 150);
+        }
+      } catch (e) {
+        // resizeTo might be blocked or not a popup
+      }
+    }
+  }, [session.questions, stealthMode]);
+
   const practiceQuestions = [
     "Tell me about yourself",
     "What are closures in JavaScript?",
@@ -258,50 +294,97 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     "How do you optimize web application performance?",
   ];
 
-  // Stealth mode - show minimal overlay
+  // Stealth Bar Mode - Thin horizontal bar at the top
   if (stealthMode && !isScreenSharing) {
+    const lastQuestion = session.questions[session.questions.length - 1];
+    const isLatestProcessing = lastQuestion?.isProcessing;
+
     return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="glass rounded-2xl p-3 shadow-2xl shadow-black/50"
-        >
-          <div className="flex items-center gap-3">
+      <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
+        {/* Top Bar */}
+        <div className="absolute top-0 left-0 w-full h-14 glass border-b border-white/5 flex items-center px-3 sm:px-6 gap-2 sm:gap-6 shadow-2xl backdrop-blur-3xl pointer-events-auto">
+          <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2 max-w-3xl mx-auto">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                autoFocus
+                value={manualQuestion}
+                onChange={e => setManualQuestion(e.target.value)}
+                placeholder="Ask anything..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 sm:px-5 py-2 text-xs sm:text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary-500/50 transition-all shadow-inner"
+              />
+              {isLatestProcessing && (
+                <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={!manualQuestion.trim() || isProcessing}
+              className="p-2 sm:p-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-30 text-white rounded-xl transition-all shadow-lg shadow-primary-600/20"
+            >
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </form>
+
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => isListening ? stopListening() : startListening()}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                isListening 
-                  ? 'bg-red-500 hover:bg-red-600' 
-                  : 'bg-primary-600 hover:bg-primary-500'
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all shadow-lg ${
+                isListening ? 'bg-red-500 shadow-red-500/20' : 'bg-surface-800 hover:bg-surface-700 shadow-black/20'
               }`}
             >
-              {isListening ? (
-                <Square className="w-4 h-4 text-white" />
-              ) : (
-                <Play className="w-4 h-4 text-white ml-0.5" />
-              )}
-            </button>
-            <div className="text-xs">
-              <p className="text-white font-semibold">{isListening ? 'Listening...' : 'Paused'}</p>
-              <p className="text-surface-500">{session.questions.length} answers</p>
-            </div>
-            <button
-              onClick={() => setStealthMode(false)}
-              className="p-1.5 hover:bg-surface-700/50 rounded-lg"
-            >
-              <Maximize2 className="w-4 h-4 text-surface-500" />
+              {isListening ? <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
             </button>
           </div>
-          
-          {(interimTranscript || transcript) && isListening && (
-            <div className="mt-2 pt-2 border-t border-surface-700/50 max-w-xs">
-              <p className="text-xs text-surface-400 truncate">
-                {interimTranscript || transcript}
-              </p>
-            </div>
+        </div>
+
+        {/* Half-Screen Center Panel for Result (Webcam Alignment) */}
+        <AnimatePresence>
+          {lastQuestion && !isLatestProcessing && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-14 left-1/2 -translate-x-1/2 w-full sm:w-[600px] max-w-[98vw] pointer-events-auto"
+            >
+              <div className="bg-surface-950/98 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-b-3xl flex flex-col overflow-hidden max-h-[70vh]">
+                <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-primary-600/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Live Eye-Contact Mode</span>
+                  </div>
+                  <button 
+                    onClick={() => setSession(prev => ({ ...prev, questions: prev.questions.filter(q => q.id !== lastQuestion.id) }))} 
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white/40 hover:text-white" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                  <div className="mb-4">
+                    <p className="text-[10px] font-bold text-primary-400 mb-1 uppercase opacity-50 tracking-widest text-center">Detected Question</p>
+                    <p className="text-sm text-white/80 font-medium leading-relaxed text-center italic">"{lastQuestion.question}"</p>
+                  </div>
+                  <div className="w-1/4 h-px bg-primary-500/20 mx-auto mb-6" />
+                  <div>
+                    <AnswerCard item={lastQuestion} index={session.questions.length - 1} isLatest={true} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
+        
+        {/* Simple transcript line */}
+        {isListening && (interimTranscript || transcript) && (
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 px-6 py-2 bg-primary-600/10 backdrop-blur-md rounded-b-2xl border-x border-b border-primary-500/20 max-w-xl w-full">
+            <p className="text-xs text-primary-300 truncate text-center font-medium italic">
+              {interimTranscript || transcript}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -398,6 +481,15 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
           {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
         </button>
 
+        {/* Pop-out */}
+        <button
+          onClick={openPopout}
+          className="p-2 hover:bg-surface-700/50 rounded-lg transition-colors text-surface-400"
+          title="Open in pop-out window"
+        >
+          <ExternalLink className="w-5 h-5" />
+        </button>
+
         {/* Stealth mode */}
         <button
           onClick={() => setStealthMode(true)}
@@ -416,9 +508,9 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Left Panel - Controls & Live Feed */}
-        <div className="lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-surface-700/30 flex flex-col">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Panel - Controls & Live Feed - Hidden on very small screens or scrollable */}
+        <div className="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-surface-700/30 flex flex-col bg-surface-950/50 backdrop-blur-md z-10">
           {/* Main Control Buttons */}
           <div className="p-6 border-b border-surface-700/30">
             <div className="space-y-4">
@@ -574,15 +666,21 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               <Trash2 className="w-4 h-4" />
               Clear History
             </button>
+            <div className="pt-2 text-center">
+              <p className="text-[10px] text-surface-600 font-medium tracking-widest uppercase">
+                Created by <span className="text-primary-500/50">Utkarsh Srivastava</span>
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 bg-surface-950">
           {/* Tabs */}
           <div className="flex border-b border-surface-700/30 px-4">
             {[
-              { id: 'live' as const, label: 'Live Q&A', icon: <Sparkles className="w-4 h-4" /> },
+              { id: 'live' as const, label: 'Current Result', icon: <Zap className="w-4 h-4" /> },
+              { id: 'history' as const, label: 'History', icon: <Clock className="w-4 h-4" /> },
               { id: 'practice' as const, label: 'Practice', icon: <BookOpen className="w-4 h-4" /> },
             ].map(tab => (
               <button
@@ -596,7 +694,7 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
               >
                 {tab.icon}
                 {tab.label}
-                {tab.id === 'live' && session.questions.length > 0 && (
+                {tab.id === 'history' && session.questions.length > 0 && (
                   <span className="w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 text-xs flex items-center justify-center">
                     {session.questions.length}
                   </span>
@@ -635,16 +733,31 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
                     </div>
                   </div>
                 ) : (
-                  session.questions.map((q, i) => (
+                  <AnswerCard
+                    key={session.questions[session.questions.length - 1].id}
+                    item={session.questions[session.questions.length - 1]}
+                    index={session.questions.length - 1}
+                    isLatest={true}
+                  />
+                )}
+                <div ref={questionsEndRef} />
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+              <div className="p-4 space-y-4">
+                {session.questions.length === 0 ? (
+                  <div className="text-center py-20 text-surface-500 italic">No history yet.</div>
+                ) : (
+                  [...session.questions].reverse().map((q, i) => (
                     <AnswerCard
                       key={q.id}
                       item={q}
-                      index={i}
-                      isLatest={i === session.questions.length - 1}
+                      index={session.questions.length - 1 - i}
+                      isLatest={false}
                     />
                   ))
                 )}
-                <div ref={questionsEndRef} />
               </div>
             )}
 

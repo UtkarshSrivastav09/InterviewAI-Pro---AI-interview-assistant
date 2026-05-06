@@ -6,17 +6,20 @@ import InterviewDashboard from './components/InterviewDashboard';
 type Page = 'landing' | 'dashboard';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('launch') === 'true' ? 'dashboard' : 'landing';
+  });
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {currentPage === 'landing' ? (
         <motion.div
           key="landing"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.15 }}
         >
           <LandingPage onGetStarted={() => setCurrentPage('dashboard')} />
         </motion.div>
@@ -26,7 +29,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.15 }}
         >
           <InterviewDashboard onBack={() => setCurrentPage('landing')} />
         </motion.div>

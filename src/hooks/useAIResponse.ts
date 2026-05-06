@@ -12,13 +12,17 @@ async function callGroq(
   signal: AbortSignal,
   ctx?: { role?: string; experience?: string },
 ): Promise<string> {
-  const sys =
-    'You are an expert interview coach helping a candidate in a LIVE technical interview right now. ' +
-    (ctx?.role ? 'Role: ' + ctx.role + '. ' : '') +
+  const sys = 
+    'You are an expert interview coach. Provide a professional, well-structured answer for a LIVE technical interview. ' +
+    (ctx?.role ? 'Target Role: ' + ctx.role + '. ' : '') +
     (ctx?.experience ? 'Experience level: ' + ctx.experience + '. ' : '') +
-    'Rules: 1) Be concise but thorough (max 300 words). 2) Use **bold** for key terms. 3) Use bullet points. 4) Include a short code snippet if it is a coding question. 5) Use markdown.';
+    'Format: 1) Start with a direct 1-sentence definition. 2) Use **bold** for technical terms. 3) Use bullet points for key features/benefits. 4) Provide a 2-3 sentence "Personal Experience" or "Use Case" example. 5) Keep it under 250 words for readability.';
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  // Use a CORS proxy because Groq doesn't allow direct browser requests
+  const proxyUrl = 'https://corsproxy.io/?';
+  const targetUrl = 'https://api.groq.com/openai/v1/chat/completions';
+  
+  const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -30,8 +34,8 @@ async function callGroq(
         { role: 'system', content: sys },
         { role: 'user', content: question },
       ],
-      temperature: 0.7,
-      max_tokens: 1024,
+      temperature: 0.6, // slightly lower for more focus
+      max_tokens: 800,
       stream: false,
     }),
     signal,
@@ -65,12 +69,11 @@ async function callGemini(
   ctx?: { role?: string; experience?: string },
 ): Promise<string> {
   const prompt =
-    'You are an expert interview coach. ' +
-    (ctx?.role ? 'Role: ' + ctx.role + '. ' : '') +
+    'You are an expert interview coach. Provide a professional, structured, and detailed answer for a technical interview. ' +
+    (ctx?.role ? 'Target Role: ' + ctx.role + '. ' : '') +
     (ctx?.experience ? 'Experience: ' + ctx.experience + '. ' : '') +
-    'Give a clear, structured, interview-ready answer (max 300 words). Use markdown.\n\nQuestion: "' +
-    question +
-    '"';
+    '\n\nQuestion: "' + question + '"' +
+    '\n\nRequirements:\n- Start with a clear definition.\n- Use **bold** for technical terms.\n- Use bullet points for key details.\n- Provide a short practical example.\n- Keep it under 250 words.';
 
   const res = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' +
@@ -338,7 +341,7 @@ export function useAIResponse() {
         }
 
         /* ── no key → built-in KB ── */
-        const delay = settings?.responseSpeed === 'fast' ? 150 : settings?.responseSpeed === 'detailed' ? 600 : 300;
+        const delay = settings?.responseSpeed === 'fast' ? 50 : settings?.responseSpeed === 'detailed' ? 300 : 150;
         await new Promise((r) => setTimeout(r, delay));
         const fb = findBestMatch(question);
         return { id, question, timestamp: new Date(), answer: fb.answer, category: fb.category, confidence: fb.confidence, isProcessing: false };
