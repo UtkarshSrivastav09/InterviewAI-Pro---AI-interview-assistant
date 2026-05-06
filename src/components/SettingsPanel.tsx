@@ -154,6 +154,11 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
               <label className="flex items-center gap-2 text-sm font-bold text-white mb-1">
                 <Key className="w-4 h-4 text-indigo-400" />
                 API Key
+                {(local.apiKey === (import.meta as any).env.VITE_GROQ_API_KEY || local.apiKey === (import.meta as any).env.VITE_GEMINI_API_KEY) && (
+                  <span className="ml-auto px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-full border border-emerald-500/20 uppercase tracking-wider">
+                    System Provided
+                  </span>
+                )}
               </label>
 
               {/* How to get key */}

@@ -36,8 +36,8 @@ interface InterviewDashboardProps {
 }
 
 const defaultSettings: UserSettings = {
-  apiKey: '',
-  aiModel: 'gemini',
+  apiKey: (import.meta as any).env.VITE_GROQ_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || '',
+  aiModel: (import.meta as any).env.VITE_GROQ_API_KEY ? 'groq' : 'gemini',
   language: 'en-US',
   responseSpeed: 'balanced',
   stealthMode: false,
@@ -50,7 +50,14 @@ const defaultSettings: UserSettings = {
 export default function InterviewDashboard({ onBack }: InterviewDashboardProps) {
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('interviewai-settings');
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // If they saved an empty key, use the .env one instead
+      const apiKey = parsed.apiKey || defaultSettings.apiKey;
+      const aiModel = parsed.apiKey ? parsed.aiModel : defaultSettings.aiModel;
+      return { ...defaultSettings, ...parsed, apiKey, aiModel };
+    }
+    return defaultSettings;
   });
   const [showSettings, setShowSettings] = useState(false);
   const [stealthMode, setStealthMode] = useState(() => {
@@ -134,8 +141,8 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         ),
       }));
 
-        showNotification('success', 'Answer ready ✓');
-        setActiveTab('live');
+      showNotification('success', 'Answer ready ✓');
+      setActiveTab('live');
     } catch {
       setSession(prev => ({
         ...prev,
