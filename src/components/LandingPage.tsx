@@ -19,9 +19,10 @@ import {
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onNavigateToAbout: () => void;
 }
 
-export default function LandingPage({ onGetStarted }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, onNavigateToAbout }: LandingPageProps) {
   const [, setHoveredFeature] = useState<number | null>(null);
 
   const features = [
@@ -121,24 +122,38 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       </div>
 
       {/* Navbar */}
-      <nav className="relative z-10 flex items-center justify-between px-6 lg:px-12 py-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white" />
+      <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 lg:px-12 py-4 sm:py-5">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shrink-0">
+            <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-white">InterviewAI<span className="text-primary-400">Pro</span></span>
+          <span className="text-base sm:text-xl font-bold text-white tracking-tight">
+            InterviewAI<span className="text-primary-400">Pro</span>
+          </span>
         </div>
+        
         <div className="hidden md:flex items-center gap-8 text-surface-400 text-sm">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
           <a href="#tech" className="hover:text-white transition-colors">Technology</a>
+          <button onClick={() => onNavigateToAbout()} className="hover:text-white transition-colors">About</button>
         </div>
-        <button
-          onClick={onGetStarted}
-          className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-primary-600/20"
-        >
-          Launch App
-        </button>
+
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          {/* Mobile Only About Button */}
+          <button 
+            onClick={() => onNavigateToAbout()} 
+            className="md:hidden text-xs sm:text-sm font-semibold text-surface-300 hover:text-white transition-colors px-2"
+          >
+            About
+          </button>
+          <button
+            onClick={onGetStarted}
+            className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-primary-600/20"
+          >
+            Launch <span className="hidden sm:inline">App</span>
+          </button>
+        </div>
       </nav>
 
       {/* Hero */}
