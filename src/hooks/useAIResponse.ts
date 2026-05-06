@@ -19,10 +19,11 @@ async function callGroq(
     'Format: 1) Start with a direct 1-sentence definition. 2) Use **bold** for technical terms. 3) Use bullet points for key features/benefits. 4) Provide a 2-3 sentence "Personal Experience" or "Use Case" example. 5) Keep it under 250 words for readability.';
 
   // Use our internal Vercel proxy to avoid CORS issues in production
-  const isProduction = window.location.hostname !== 'localhost';
+  const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
   const proxyEndpoint = '/api/proxy';
   
   if (isProduction) {
+    console.log('Using production proxy for Groq API');
     const res = await fetch(proxyEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
