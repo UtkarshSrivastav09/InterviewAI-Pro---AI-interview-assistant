@@ -1,11 +1,15 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Brain, Target, Zap, ChevronRight, Mail } from 'lucide-react';
+import { ArrowLeft, Brain, Target, Zap, ChevronRight, Mail, ArrowUp } from 'lucide-react';
+import { useState } from 'react';
 
 interface AboutPageProps {
   onBack: () => void;
 }
 
 export default function AboutPage({ onBack }: AboutPageProps) {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -26,7 +30,7 @@ export default function AboutPage({ onBack }: AboutPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 text-white overflow-hidden relative selection:bg-primary-500/30">
+    <div className="min-h-screen bg-surface-950 text-white relative selection:bg-primary-500/30">
       {/* Dynamic Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-600/20 rounded-full blur-[120px]" />
@@ -211,6 +215,14 @@ export default function AboutPage({ onBack }: AboutPageProps) {
           </button>
         </motion.div>
       </motion.div>
+      {/* Scroll to Top Button - ALWAYS VISIBLE - Mobile Optimized */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] p-3 sm:p-4 bg-primary-600 hover:bg-primary-500 text-white rounded-2xl shadow-2xl shadow-primary-600/40 border border-white/20 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
+        title="Scroll to top"
+      >
+        <ArrowUp className="w-6 h-6" />
+      </button>
     </div>
   );
 }

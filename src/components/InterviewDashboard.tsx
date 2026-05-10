@@ -3,10 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings,
   Brain,
-  MonitorOff,
-  Monitor,
-  Minimize2,
-  ArrowLeft,
   Clock,
   Trash2,
   Download,
@@ -15,12 +11,17 @@ import {
   Zap,
   BookOpen,
   Send,
+  MessageSquare,
   Mic,
   Square,
   Play,
   X,
   CheckCircle,
-  ExternalLink,
+  ArrowUp,
+  Eye,
+  EyeOff,
+  LogOut,
+  ArrowLeft,
 } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useScreenShareDetection } from '../hooks/useScreenShareDetection';
@@ -81,8 +82,9 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   const [activeTab, setActiveTab] = useState<'live' | 'history' | 'practice'>('live');
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
+  const contentRef = useRef<HTMLDivElement>(null);
   const questionsEndRef = useRef<HTMLDivElement>(null);
-  const { isScreenSharing, setIsScreenSharing } = useScreenShareDetection();
+  const { isScreenSharing } = useScreenShareDetection();
   const { isProcessing, generateAnswer, cancelProcessing } = useAIResponse();
 
   // Save settings to localStorage
@@ -177,10 +179,24 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     return () => clearInterval(timer);
   }, []);
 
-  // Auto scroll
+  // Scroll to bottom when questions change (if in live tab)
   useEffect(() => {
-    questionsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [session.questions]);
+    if (activeTab === 'live') {
+      questionsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [session.questions, activeTab]);
+
+  const scrollToTop = () => {
+    // Desktop/Main container
+    const mainContainer = contentRef.current || document.getElementById('dashboard-scroll-container');
+    // Mobile container (from index.css override)
+    const mobileContainer = document.getElementById('mobile-scroll-container');
+    
+    if (mainContainer) mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    if (mobileContainer) mobileContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -254,17 +270,6 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     showNotification('success', 'Session exported!');
   };
 
-  const openPopout = () => {
-    const width = window.screen.width;
-    const height = 150;
-    const left = 0;
-    const top = 0;
-    window.open(
-      window.location.href + '?mode=stealth',
-      'InterviewAI-Stealth',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
-    );
-  };
 
   // Smart window resizing for stealth pop-out
   useEffect(() => {
@@ -415,7 +420,15 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 flex flex-col">
+    <div className="min-h-screen bg-surface-950 flex flex-col relative pb-20 lg:pb-0">
+      {/* Scroll to Top Button - ALWAYS VISIBLE - Mobile Optimized */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] p-3 sm:p-4 bg-primary-600 hover:bg-primary-500 text-white rounded-2xl shadow-2xl shadow-primary-600/40 border border-white/20 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
+        title="Scroll to top"
+      >
+        <ArrowUp className="w-6 h-6" />
+      </button>
       {/* Production Setup Warning */}
       {isProduction && hasNoRealKey && (
         <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-500">
@@ -475,89 +488,80 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
       </AnimatePresence>
 
       {/* Top Bar */}
-      <header className="glass border-b border-surface-700/30 px-4 py-3 flex items-center gap-4 sticky top-0 z-40">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-surface-700/50 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-surface-400" />
-        </button>
-
-        <div className="flex items-center gap-2">
-          <Brain className="w-5 h-5 text-primary-400" />
-          <span className="font-bold text-white hidden sm:inline">InterviewAI Pro</span>
+      <header className="glass border-b border-surface-700/30 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 z-50 sticky top-0 backdrop-blur-xl">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
+            <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm sm:text-lg font-bold text-white flex items-center gap-2">
+              InterviewAI <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded-full border border-primary-500/30">PRO</span>
+            </h1>
+            <p className="text-[10px] sm:text-xs text-surface-400">Co-Pilot Active • {session.role || 'General Interview'}</p>
+          </div>
         </div>
 
-        {/* API Status */}
-        <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs ${
-          settings.apiKey ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${settings.apiKey ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-          {settings.apiKey 
-            ? (settings.aiModel === 'groq' ? '⚡ Groq' : settings.aiModel === 'gemini' ? '🌟 Gemini' : settings.aiModel === 'cohere' ? '🔮 Cohere' : '✓ AI')
-            : '📚 Built-in'}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 sm:p-2.5 bg-surface-800 border border-surface-700 text-surface-400 hover:border-primary-500/50 hover:text-primary-400 rounded-lg sm:rounded-xl transition-all"
+            title="Go Back"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[10px] uppercase text-surface-500 font-bold tracking-widest">Session Time</span>
+            <span className="text-sm font-mono text-white">{formatDuration(elapsedTime)}</span>
+          </div>
+
+          <div className={`hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs ${
+            settings.apiKey ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+          }`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${settings.apiKey ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className="hidden sm:inline">
+              {settings.apiKey 
+                ? (settings.aiModel === 'groq' ? '⚡ Groq' : settings.aiModel === 'gemini' ? '🌟 Gemini' : '✓ AI')
+                : '📚 Local'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setStealthMode(!stealthMode)}
+            className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
+              stealthMode 
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-lg shadow-amber-500/20' 
+                : 'bg-surface-800 border-surface-700 text-surface-400 hover:border-primary-500/50 hover:text-primary-400'
+            }`}
+            title={stealthMode ? "Disable Stealth Mode" : "Enable Stealth Mode"}
+          >
+            {stealthMode ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+          </button>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 sm:p-2.5 bg-surface-800 border border-surface-700 text-surface-400 hover:border-primary-500/50 hover:text-primary-400 rounded-lg sm:rounded-xl transition-all"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all"
+          >
+            <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">End Session</span>
+          </button>
         </div>
-
-        <div className="flex-1" />
-
-        {/* Timer */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 text-surface-300 text-sm font-mono">
-          <Clock className="w-3.5 h-3.5 text-primary-400" />
-          {formatDuration(elapsedTime)}
-        </div>
-
-        {/* Question count */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 text-surface-300 text-sm">
-          <BookOpen className="w-3.5 h-3.5 text-primary-400" />
-          <span>{session.questions.length} Q&A</span>
-        </div>
-
-        {/* Screen share toggle */}
-        <button
-          onClick={() => setIsScreenSharing(!isScreenSharing)}
-          className={`p-2 rounded-lg transition-all ${
-            isScreenSharing
-              ? 'bg-red-500/20 text-red-400'
-              : 'hover:bg-surface-700/50 text-surface-400'
-          }`}
-          title={isScreenSharing ? 'Screen share detected - App hidden' : 'Simulate screen share'}
-        >
-          {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
-        </button>
-
-        {/* Pop-out */}
-        <button
-          onClick={openPopout}
-          className="p-2 hover:bg-surface-700/50 rounded-lg transition-colors text-surface-400"
-          title="Open in pop-out window"
-        >
-          <ExternalLink className="w-5 h-5" />
-        </button>
-
-        {/* Stealth mode */}
-        <button
-          onClick={() => setStealthMode(true)}
-          className="p-2 hover:bg-surface-700/50 rounded-lg transition-colors text-surface-400"
-          title="Stealth mode"
-        >
-          <Minimize2 className="w-5 h-5" />
-        </button>
-
-        {/* Settings */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-2 hover:bg-surface-700/50 rounded-lg transition-colors text-surface-400"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+      <div id="mobile-scroll-container" className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
         {/* Left Panel - Controls & Live Feed - Scrollable on mobile, fixed on desktop */}
         <div className="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-surface-700/30 flex flex-col bg-surface-950/50 backdrop-blur-md z-10 overflow-y-auto lg:overflow-visible shrink-0 max-h-[40vh] lg:max-h-none">
           {/* Main Control Buttons */}
-          <div className="p-6 border-b border-surface-700/30">
-            <div className="space-y-4">
+          <div className="p-4 border-b border-surface-700/30">
+            <div className="space-y-3">
               {/* START / STOP Button */}
               {!isListening ? (
                 <button
@@ -658,8 +662,8 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
             </div>
           </div>
 
-          {/* Manual Question Input */}
-          <div className="p-4 border-b border-surface-700/30">
+          {/* Manual Question Input - DESKTOP ONLY */}
+          <div className="hidden lg:block p-4 border-b border-surface-700/30">
             <div className="flex items-center gap-2 mb-3">
               <Send className="w-4 h-4 text-primary-400" />
               <span className="text-sm font-semibold text-surface-300">Type a Question</span>
@@ -669,13 +673,13 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
                 type="text"
                 value={manualQuestion}
                 onChange={e => setManualQuestion(e.target.value)}
-                placeholder="Type or paste a question..."
-                className="flex-1 bg-surface-800/50 border border-surface-600/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-surface-600 focus:outline-none focus:border-primary-500/50"
+                placeholder="Ask AI anything..."
+                className="flex-1 bg-surface-800/50 border border-surface-600/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-surface-600 focus:outline-none focus:border-primary-500/50 transition-all"
               />
               <button
                 type="submit"
                 disabled={!manualQuestion.trim() || isProcessing}
-                className="px-4 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+                className="p-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all"
               >
                 <Zap className="w-4 h-4" />
               </button>
@@ -683,11 +687,17 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
           </div>
 
           {/* Keyboard shortcuts */}
-          <div className="p-4 border-b border-surface-700/30">
+          <div className="p-4 border-b border-surface-700/30 hidden lg:block">
             <p className="text-xs text-surface-500 mb-2 font-semibold">Keyboard Shortcuts:</p>
-            <div className="space-y-1 text-xs text-surface-500">
-              <div><kbd className="px-1.5 py-0.5 bg-surface-800 rounded text-surface-400">Ctrl + Space</kbd> Toggle listening</div>
-              <div><kbd className="px-1.5 py-0.5 bg-surface-800 rounded text-surface-400">Esc</kbd> Stop / Cancel</div>
+            <div className="space-y-3 text-xs text-surface-500">
+              <div className="flex items-center gap-3">
+                <kbd className="px-2 py-1 bg-surface-800 rounded-md text-surface-400 font-mono border border-surface-700">Ctrl + Space</kbd>
+                <span>Toggle listening</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <kbd className="px-2 py-1 bg-surface-800 rounded-md text-surface-400 font-mono border border-surface-700">Esc</kbd>
+                <span>Stop / Cancel</span>
+              </div>
             </div>
           </div>
 
@@ -747,9 +757,13 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div 
+            id="dashboard-scroll-container"
+            ref={contentRef} 
+            className="flex-1 overflow-y-auto relative"
+          >
             {activeTab === 'live' && (
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-3">
                 {session.questions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-[60vh] text-center">
                     <div className="w-20 h-20 rounded-2xl bg-primary-500/10 flex items-center justify-center mb-6">
@@ -776,12 +790,16 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
                     </div>
                   </div>
                 ) : (
-                  <AnswerCard
-                    key={session.questions[session.questions.length - 1].id}
-                    item={session.questions[session.questions.length - 1]}
-                    index={session.questions.length - 1}
-                    isLatest={true}
-                  />
+                  <div className="space-y-6">
+                    {session.questions.map((q, idx) => (
+                      <AnswerCard
+                        key={q.id}
+                        item={q}
+                        index={idx}
+                        isLatest={idx === session.questions.length - 1}
+                      />
+                    ))}
+                  </div>
                 )}
                 <div ref={questionsEndRef} />
               </div>
@@ -842,12 +860,32 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         </div>
       </div>
 
+      {/* Bottom Input Bar - MOBILE ONLY FIXED */}
+      <div className="lg:hidden fixed bottom-0 left-0 w-full glass border-t border-surface-700/30 p-3 pb-safe backdrop-blur-xl z-[9998]">
+        <form onSubmit={handleManualSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={manualQuestion}
+            onChange={e => setManualQuestion(e.target.value)}
+            placeholder="Type your question..."
+            className="flex-1 bg-surface-800/50 border border-surface-700/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-surface-500 focus:outline-none focus:border-primary-500/50"
+          />
+          <button
+            type="submit"
+            disabled={!manualQuestion.trim() || isProcessing}
+            className="w-11 h-11 flex items-center justify-center bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-600/20 shrink-0 active:scale-95 transition-all"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </form>
+      </div>
+
       {/* Processing indicator */}
       <AnimatePresence>
         {isProcessing && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: -80 }}
             exit={{ opacity: 0, y: 20 }}
             className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
           >
@@ -868,6 +906,8 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Scroll to Top Button */}
     </div>
   );
 }

@@ -13,10 +13,12 @@ async function callGroq(
   ctx?: { role?: string; experience?: string },
 ): Promise<string> {
   const sys = 
-    'You are an expert interview coach. Provide a professional, well-structured answer for a LIVE technical interview. ' +
-    (ctx?.role ? 'Target Role: ' + ctx.role + '. ' : '') +
-    (ctx?.experience ? 'Experience level: ' + ctx.experience + '. ' : '') +
-    'Format: 1) Start with a direct 1-sentence definition. 2) Use **bold** for technical terms. 3) Use bullet points for key features/benefits. 4) Provide a 2-3 sentence "Personal Experience" or "Use Case" example. 5) Keep it under 250 words for readability.';
+    'You are a world-class Technical Interview Coach. Your goal is to provide perfectly structured, professional answers that a candidate can literally say aloud during a high-stakes interview.\n\n' +
+    'FORMATTING RULES:\n' +
+    '1. ⚡ **Direct Definition**: Start with a concise 1-2 sentence technical definition.\n' +
+    '2. 🗣️ **Interview Script**: Provide a section titled "**Interview Script**" that contains the exact words a candidate should speak. Use professional, confident language.\n' +
+    '3. 🔑 **Key Terms**: List 3-4 critical technical terms in a bulleted list.\n' +
+    'Focus on being professional and providing a complete verbal response.';
 
   // Use our internal Vercel proxy to avoid CORS issues in production
   const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
@@ -109,11 +111,12 @@ async function callGemini(
   ctx?: { role?: string; experience?: string },
 ): Promise<string> {
   const prompt =
-    'You are an expert interview coach. Provide a professional, structured, and detailed answer for a technical interview. ' +
-    (ctx?.role ? 'Target Role: ' + ctx.role + '. ' : '') +
-    (ctx?.experience ? 'Experience: ' + ctx.experience + '. ' : '') +
-    '\n\nQuestion: "' + question + '"' +
-    '\n\nRequirements:\n- Start with a clear definition.\n- Use **bold** for technical terms.\n- Use bullet points for key details.\n- Provide a short practical example.\n- Keep it under 250 words.';
+    'You are a Technical Interview Assistant. Provide a professional, high-impact answer that a candidate can speak directly in an interview.\n\n' +
+    'STRUCTURE:\n' +
+    '- ⚡ **Direct Definition**: 1-2 sentences.\n' +
+    '- 🗣️ **Interview Script**: What the candidate should say (2-3 paragraphs).\n' +
+    '- 🔑 **Key Terms**: 3-4 critical terms.\n\n' +
+    'Question: "' + question + '"';
 
   const res = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' +

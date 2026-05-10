@@ -57,28 +57,16 @@ function md(raw: string): string {
   // 9. ordered list items
   t = t.replace(/^\d+\.\s(.+)$/gm, '<li class="ml-5 list-decimal text-slate-300 text-sm leading-relaxed">$1</li>');
 
-  // 10. table rows  |...|...|
-  t = t.replace(/^\|(.+)\|$/gm, (match) => {
-    const cells = match
-      .split('|')
-      .filter(Boolean)
-      .map((c) => c.trim());
-    // skip separator rows like |---|---|
-    if (cells.every((c) => /^[-:]+$/.test(c))) return '';
-    return (
-      '<div class="grid grid-cols-' +
-      cells.length +
-      ' gap-2 text-xs text-slate-400 py-1 border-b border-slate-700/40">' +
-      cells.map((c) => '<span>' + c + '</span>').join('') +
-      '</div>'
-    );
-  });
+  // 10. Table grouping (Group consecutive | lines into one table)
+  const lines = t.split('\n');
+  const processedLines: string[] = [];
+  let currentTable: string[][] = [];
 
   // 11. double newlines → paragraph break, single → <br>
-  t = t.replace(/\n\n/g, '</p><p class="mt-2">');
+  t = t.replace(/\n\n/g, '</p><p class="mt-1">');
   t = t.replace(/\n/g, '<br/>');
 
-  return '<p>' + t + '</p>';
+  return '<p>' + t.trim() + '</p>';
 }
 
 export default function AnswerCard({ item, index, isLatest }: AnswerCardProps) {
@@ -183,7 +171,7 @@ export default function AnswerCard({ item, index, isLatest }: AnswerCardProps) {
 
       {/* ── answer body ── */}
       {expanded && (
-        <div className="border-t border-slate-700/30 p-4">
+        <div className="border-t border-slate-700/30 p-3">
           {/* heading row */}
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-md bg-indigo-500/20 flex items-center justify-center">

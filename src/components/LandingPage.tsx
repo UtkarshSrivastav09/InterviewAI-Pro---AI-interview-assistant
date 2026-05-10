@@ -15,6 +15,7 @@ import {
   MessageSquare,
   ArrowRight,
   ExternalLink,
+  ArrowUp,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -24,6 +25,10 @@ interface LandingPageProps {
 
 export default function LandingPage({ onGetStarted, onNavigateToAbout }: LandingPageProps) {
   const [, setHoveredFeature] = useState<number | null>(null);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const features = [
     {
@@ -105,7 +110,7 @@ export default function LandingPage({ onGetStarted, onNavigateToAbout }: Landing
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 overflow-hidden">
+    <div className="min-h-screen bg-surface-950">
       {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl" />
@@ -174,13 +179,13 @@ export default function LandingPage({ onGetStarted, onNavigateToAbout }: Landing
           <Sparkles className="w-4 h-4" />
         </motion.div>
 
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight max-w-5xl mx-auto mb-6">
+        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight max-w-5xl mx-auto mb-6">
           Ace Every Interview with{' '}
           <span className="gradient-text">AI-Powered</span>{' '}
           Real-Time Answers
         </h1>
 
-        <p className="text-lg md:text-xl text-surface-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-surface-400 max-w-2xl mx-auto mb-10 leading-relaxed px-4">
           Your invisible AI co-pilot for online interviews. Detects questions from your meeting audio,
           generates expert answers in 2 seconds, and stays completely hidden during screen sharing.
         </p>
@@ -213,41 +218,40 @@ export default function LandingPage({ onGetStarted, onNavigateToAbout }: Landing
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="mt-16 max-w-4xl mx-auto"
+          className="mt-12 sm:mt-16 max-w-4xl mx-auto px-4 sm:px-0"
         >
-          <div className="glass rounded-2xl p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-surface-500 text-sm ml-2">InterviewAI Pro — Live Session</span>
+          <div className="glass rounded-2xl p-4 sm:p-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-6">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
+              <span className="text-surface-500 text-[10px] sm:text-sm ml-1 sm:ml-2">InterviewAI Pro — Live Session</span>
             </div>
 
             <div className="space-y-4">
               {/* Question */}
-              <div className="flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Mic className="w-4 h-4 text-red-400" />
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-1">
+                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
                 </div>
-                <div className="glass-light rounded-xl p-4 flex-1 text-left">
-                  <p className="text-xs text-red-400 font-semibold mb-1">DETECTED QUESTION</p>
-                  <p className="text-surface-200">"Can you explain what closures are in JavaScript and give a practical example?"</p>
+                <div className="glass-light rounded-xl p-3 sm:p-4 flex-1 text-left">
+                  <p className="text-[10px] text-red-400 font-semibold mb-1 uppercase">Detected Question</p>
+                  <p className="text-surface-200 text-sm sm:text-base">"Can you explain what closures are in JavaScript and give a practical example?"</p>
                 </div>
               </div>
 
               {/* Answer */}
-              <div className="flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Brain className="w-4 h-4 text-primary-400" />
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0 mt-1">
+                  <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-400" />
                 </div>
-                <div className="glass-light rounded-xl p-4 flex-1 text-left border border-primary-500/20">
+                <div className="glass-light rounded-xl p-3 sm:p-4 flex-1 text-left border border-primary-500/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs text-primary-400 font-semibold">AI ANSWER</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">95% confidence</span>
-                    <span className="text-xs text-surface-500">1.8s</span>
+                    <p className="text-[10px] text-primary-400 font-semibold uppercase">AI Answer</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 hidden xs:inline">95% confidence</span>
                   </div>
-                  <p className="text-surface-200 text-sm leading-relaxed">
-                    A <strong>closure</strong> is a function that retains access to variables from its outer scope even after the outer function has returned. This creates a persistent scope...
+                  <p className="text-surface-200 text-xs sm:text-sm leading-relaxed">
+                    A <strong>closure</strong> is a function that retains access to variables from its outer scope even after the outer function has returned...
                   </p>
                 </div>
               </div>
@@ -394,6 +398,14 @@ export default function LandingPage({ onGetStarted, onNavigateToAbout }: Landing
           </div>
         </div>
       </footer>
+      {/* Scroll to Top Button - ALWAYS VISIBLE - Mobile Optimized */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] p-3 sm:p-4 bg-primary-600 hover:bg-primary-500 text-white rounded-2xl shadow-2xl shadow-primary-600/40 border border-white/20 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
+        title="Scroll to top"
+      >
+        <ArrowUp className="w-6 h-6" />
+      </button>
     </div>
   );
 }
