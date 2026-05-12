@@ -14,6 +14,7 @@ import {
   ExternalLink,
   CheckCircle,
   AlertCircle,
+  Volume2,
 } from 'lucide-react';
 import type { UserSettings } from '../types';
 
@@ -312,6 +313,40 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
             </div>
           </div>
 
+          {/* ── Dual Voice Capture Toggle ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/10 rounded-lg">
+                    <Volume2 className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">Dual Voice Mode (Beta)</div>
+                    <div className="text-[10px] text-slate-500">Capture desktop audio (Zoom/Meet)</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLocal(prev => ({ ...prev, dualVoiceMode: !prev.dualVoiceMode }))}
+                  className={`w-12 h-6 rounded-full transition-all relative ${
+                    local.dualVoiceMode ? 'bg-indigo-600' : 'bg-slate-700'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
+                    local.dualVoiceMode ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+              
+              {local.dualVoiceMode && (
+                <div className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-2 text-indigo-300">
+                  <p className="flex items-center gap-1.5 mb-1">
+                    <Zap className="w-3 h-3" />
+                    <strong>Instant Setup:</strong> When you start listening, select "Share Tab Audio" to capture the interviewer.
+                  </p>
+                </div>
+              )}
+            </div>
+
           {/* ── Language ── */}
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-white mb-2">
@@ -327,6 +362,33 @@ export default function SettingsPanel({ settings, onSave, onClose }: SettingsPan
               <option value="en-IN">English (India)</option>
               <option value="hi-IN">Hindi</option>
             </select>
+          </div>
+
+          {/* ── Dual-Voice Setup (New Help Section) ── */}
+          <div className="p-4 bg-primary-500/5 border border-primary-500/20 rounded-2xl">
+            <div className="flex items-center gap-2 mb-2 text-primary-400 font-bold text-xs uppercase tracking-widest">
+              <Volume2 className="w-3.5 h-3.5" />
+              Dual-Voice Setup Guide
+            </div>
+            <p className="text-[11px] text-surface-400 leading-relaxed mb-3">
+              To capture both <strong>Your Voice</strong> and the <strong>Interviewer's Voice</strong> (from Zoom/Meet), follow these steps:
+            </p>
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-surface-800 text-[10px] flex items-center justify-center shrink-0 text-white font-bold border border-white/10">1</div>
+                <div>
+                  <p className="text-xs text-white font-medium">Windows "Stereo Mix"</p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">Right-click Speaker icon → Sounds → Recording → Enable "Stereo Mix" and set as Default Device.</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-surface-800 text-[10px] flex items-center justify-center shrink-0 text-white font-bold border border-white/10">2</div>
+                <div>
+                  <p className="text-xs text-white font-medium">External Speakers</p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">Alternatively, use external speakers so your microphone picks up the interviewer's voice naturally.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── Tech Stack ── */}

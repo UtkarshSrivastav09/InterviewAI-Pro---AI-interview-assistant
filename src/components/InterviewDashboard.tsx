@@ -46,6 +46,7 @@ const defaultSettings: UserSettings = {
   responseSpeed: 'balanced',
   stealthMode: false,
   autoListen: false,
+  dualVoiceMode: false,
   role: '',
   experience: 'mid',
   techStack: [],
@@ -85,7 +86,10 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   const contentRef = useRef<HTMLDivElement>(null);
   const questionsEndRef = useRef<HTMLDivElement>(null);
   const { isScreenSharing } = useScreenShareDetection();
-  const { isProcessing, generateAnswer, cancelProcessing } = useAIResponse();
+  const { isProcessing, generateAnswer, transcribeAudio, cancelProcessing } = useAIResponse();
+  const [isSystemAudioActive, setIsSystemAudioActive] = useState(false);
+  const systemRecorderRef = useRef<MediaRecorder | null>(null);
+  const systemStreamRef = useRef<MediaStream | null>(null);
 
   // Save settings to localStorage
   useEffect(() => {
@@ -165,11 +169,98 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     isListening,
     transcript,
     interimTranscript,
-    startListening,
-    stopListening,
+    startListening: startMicListening,
+    stopListening: stopMicListening,
     isSupported,
     error: speechError,
   } = useSpeechRecognition(handleQuestionDetected);
+
+  const stopSystemAudio = useCallback(() => {
+    if (systemRecorderRef.current) {
+      systemRecorderRef.current.stop();
+      systemRecorderRef.current = null;
+    }
+    if (systemStreamRef.current) {
+      systemStreamRef.current.getTracks().forEach(t => t.stop());
+      systemStreamRef.current = null;
+    }
+    setIsSystemAudioActive(false);
+  }, []);
+
+  const startListening = useCallback(async () => {
+    if (settings.dualVoiceMode && !systemStreamRef.current) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        } as any);
+
+        systemStreamRef.current = stream;
+        setIsSystemAudioActive(true);
+
+        const recorder = new MediaRecorder(stream, { 
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 128000 
+        });
+        systemRecorderRef.current = recorder;
+        
+        recorder.ondataavailable = async (e) => {
+          if (e.data.size > 0 && isSystemAudioActive) {
+            const reader = new FileReader();
+            reader.readAsDataURL(e.data);
+            reader.onloadend = async () => {
+              const base64 = (reader.result as string).split(',')[1];
+              try {
+                // Only transcribe if there is actual audio content
+                const text = await transcribeAudio(base64, 'audio/webm', settings.apiKey, new AbortController().signal);
+                if (text && text.length > 10) {
+                  console.log('System Transcript:', text);
+                  handleQuestionDetected(text);
+                }
+              } catch (err) {
+                console.error('System transcription failed', err);
+              }
+            };
+          }
+        };
+
+        // Record in shorter 5-second slices for faster response
+        recorder.start(5000);
+        
+        stream.getVideoTracks().forEach(t => {
+          t.onended = () => stopSystemAudio();
+        });
+
+        showNotification('success', 'Desktop audio capture active');
+      } catch (err) {
+        console.error('Failed to start system audio capture', err);
+        showNotification('error', 'Screen share with audio required');
+      }
+    } else if (settings.dualVoiceMode && systemStreamRef.current) {
+        // Just ensure recorder is running if it was stopped
+        if (systemRecorderRef.current?.state === 'inactive') {
+            systemRecorderRef.current.start(5000);
+        }
+        setIsSystemAudioActive(true);
+    }
+    
+    startMicListening();
+  }, [settings.dualVoiceMode, settings.apiKey, isSystemAudioActive, startMicListening, transcribeAudio, handleQuestionDetected, stopSystemAudio]);
+
+  const stopListening = useCallback(() => {
+    stopMicListening();
+    // In dual mode, we keep the stream but pause the processing or just let it run
+    // Actually, to fulfill the "direct" request, we should probably just keep it listening
+    // or at least stop the UI feedback.
+    setIsSystemAudioActive(false);
+    if (systemRecorderRef.current?.state === 'recording') {
+        systemRecorderRef.current.stop();
+    }
+  }, [stopMicListening]);
 
   // Timer
   useEffect(() => {
@@ -271,6 +362,13 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
   };
 
 
+  // Auto-start listening when entering Stealth Mode if Dual Voice is on
+  useEffect(() => {
+    if (stealthMode && settings.dualVoiceMode && !isListening && !isSystemAudioActive) {
+      startListening();
+    }
+  }, [stealthMode, settings.dualVoiceMode, isListening, isSystemAudioActive, startListening]);
+
   // Smart window resizing for stealth pop-out
   useEffect(() => {
     if (stealthMode) {
@@ -315,18 +413,28 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
     const isLatestProcessing = lastQuestion?.isProcessing;
 
     return (
-      <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
-        {/* Top Bar */}
-        <div className="absolute top-0 left-0 w-full h-14 glass border-b border-white/5 flex items-center px-3 sm:px-6 gap-2 sm:gap-6 shadow-2xl backdrop-blur-3xl pointer-events-auto">
-          <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2 max-w-3xl mx-auto">
+      <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden bg-transparent">
+        {/* Floating Tab Bar Container */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 p-2 sm:p-4 w-full max-w-xl flex flex-col items-center gap-2 sm:gap-3">
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="glass border border-white/10 rounded-2xl flex items-center px-3 sm:px-4 py-2 gap-2 sm:gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl pointer-events-auto w-[95vw] sm:w-auto"
+          >
+          <div className="flex items-center gap-1.5 sm:gap-2 pr-2 sm:pr-4 border-r border-white/10">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary-500 animate-pulse" />
+            <span className="text-[8px] sm:text-[10px] font-bold text-white/50 uppercase tracking-widest">Live</span>
+          </div>
+
+          <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2">
             <div className="relative flex-1">
               <input
                 type="text"
                 autoFocus
                 value={manualQuestion}
                 onChange={e => setManualQuestion(e.target.value)}
-                placeholder="Ask anything..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 sm:px-5 py-2 text-xs sm:text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary-500/50 transition-all shadow-inner"
+                placeholder="Ask..."
+                className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 text-[10px] sm:text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary-500/50 transition-all shadow-inner"
               />
               {isLatestProcessing && (
                 <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2">
@@ -343,49 +451,48 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
             </button>
           </form>
 
-          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => isListening ? stopListening() : startListening()}
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all shadow-lg ${
-                isListening ? 'bg-red-500 shadow-red-500/20' : 'bg-surface-800 hover:bg-surface-700 shadow-black/20'
+                isListening || isSystemAudioActive ? 'bg-red-500 shadow-red-500/20' : 'bg-surface-800 hover:bg-surface-700 shadow-black/20'
               }`}
             >
-              {isListening ? <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+              {isListening || isSystemAudioActive ? <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
             </button>
-          </div>
-        </div>
+            
+            <button
+              onClick={() => setStealthMode(false)}
+              className="p-2 sm:p-2.5 bg-surface-800 hover:bg-surface-700 text-white/40 hover:text-white rounded-xl transition-all"
+              title="Exit Stealth"
+            >
+              <X className="w-4 h-4" />
+            </button>
+        </motion.div>
 
-        {/* Half-Screen Center Panel for Result (Webcam Alignment) */}
+        {/* Compact Result Card (Anchored to the tab) */}
         <AnimatePresence>
           {lastQuestion && !isLatestProcessing && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-14 left-1/2 -translate-x-1/2 w-full sm:w-[600px] max-w-[98vw] pointer-events-auto"
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="w-full max-w-[480px] pointer-events-auto"
             >
-              <div className="bg-surface-950/98 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-b-3xl flex flex-col overflow-hidden max-h-[70vh]">
-                <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-primary-600/5">
+              <div className="bg-surface-900/95 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl flex flex-col overflow-hidden max-h-[60vh] ring-1 ring-white/5">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-white/5">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Live Eye-Contact Mode</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">AI Result</span>
                   </div>
                   <button 
                     onClick={() => setSession(prev => ({ ...prev, questions: prev.questions.filter(q => q.id !== lastQuestion.id) }))} 
                     className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                   >
-                    <X className="w-4 h-4 text-white/40 hover:text-white" />
+                    <X className="w-3.5 h-3.5 text-white/20 hover:text-white" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                  <div className="mb-4">
-                    <p className="text-[10px] font-bold text-primary-400 mb-1 uppercase opacity-50 tracking-widest text-center">Detected Question</p>
-                    <p className="text-sm text-white/80 font-medium leading-relaxed text-center italic">"{lastQuestion.question}"</p>
-                  </div>
-                  <div className="w-1/4 h-px bg-primary-500/20 mx-auto mb-6" />
-                  <div>
-                    <AnswerCard item={lastQuestion} index={session.questions.length - 1} isLatest={true} />
-                  </div>
+                <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                  <AnswerCard item={lastQuestion} index={session.questions.length - 1} isLatest={true} />
                 </div>
               </div>
             </motion.div>
@@ -394,14 +501,15 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
         
         {/* Simple transcript line */}
         {isListening && (interimTranscript || transcript) && (
-          <div className="absolute top-14 left-1/2 -translate-x-1/2 px-6 py-2 bg-primary-600/10 backdrop-blur-md rounded-b-2xl border-x border-b border-primary-500/20 max-w-xl w-full">
+          <div className="px-6 py-2 bg-primary-600/10 backdrop-blur-md rounded-b-2xl border-x border-b border-primary-500/20 max-w-xl w-full">
             <p className="text-xs text-primary-300 truncate text-center font-medium italic">
               {interimTranscript || transcript}
             </p>
           </div>
         )}
       </div>
-    );
+    </div>
+  );
   }
 
   // Hidden during screen share
@@ -595,9 +703,9 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
 
               {/* Status indicators */}
               <div className="flex items-center justify-center gap-4 text-xs">
-                <div className={`flex items-center gap-1.5 ${isListening ? 'text-green-400' : 'text-surface-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-400 animate-pulse' : 'bg-surface-600'}`} />
-                  {isListening ? 'Listening' : 'Idle'}
+                <div className={`flex items-center gap-1.5 ${isListening || isSystemAudioActive ? 'text-green-400' : 'text-surface-500'}`}>
+                  <div className={`w-2 h-2 rounded-full ${isListening || isSystemAudioActive ? 'bg-green-400 animate-pulse' : 'bg-surface-600'}`} />
+                  {isListening || isSystemAudioActive ? 'Listening' : 'Idle'}
                 </div>
                 <div className={`flex items-center gap-1.5 ${isProcessing ? 'text-primary-400' : 'text-surface-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${isProcessing ? 'bg-primary-400 animate-pulse' : 'bg-surface-600'}`} />
@@ -632,7 +740,7 @@ export default function InterviewDashboard({ onBack }: InterviewDashboardProps) 
 
             {/* Waveform */}
             <div className="mt-4 flex justify-center">
-              <Waveform isActive={isListening} barCount={30} height={32} />
+              <Waveform isActive={isListening || isSystemAudioActive} barCount={30} height={32} />
             </div>
           </div>
 

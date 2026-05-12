@@ -26,6 +26,7 @@ export interface UserSettings {
   responseSpeed: 'fast' | 'balanced' | 'detailed';
   stealthMode: boolean;
   autoListen: boolean;
+  dualVoiceMode: boolean;
   role: string;
   experience: string;
   techStack: string[];

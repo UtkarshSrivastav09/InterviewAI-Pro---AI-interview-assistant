@@ -148,6 +148,39 @@ async function callGemini(
   return text;
 }
 
+export async function transcribeAudio(
+  audioBase64: string,
+  mimeType: string,
+  apiKey: string,
+  signal: AbortSignal
+): Promise<string> {
+  const prompt = "Transcribe this technical interview audio. Return only the transcription text, no preamble.";
+  
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: audioBase64 } }
+            ]
+          }
+        ],
+        generationConfig: { temperature: 0.1 }
+      }),
+      signal,
+    }
+  );
+
+  if (!res.ok) throw new Error('Transcription failed');
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
 /* ────────────────────────────────────────────
    Built-in knowledge base (no API needed)
    ──────────────────────────────────────────── */
@@ -430,5 +463,5 @@ export function useAIResponse() {
     [],
   );
 
-  return { isProcessing, generateAnswer, cancelProcessing };
+  return { isProcessing, generateAnswer, transcribeAudio, cancelProcessing };
 }
